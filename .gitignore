@@ -9,3 +9,6 @@ __pycache__/
 # Прочее
 .env
 *.log
+# Кэши инструментов
+.pytest_cache/
+.ruff_cache/
