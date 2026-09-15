@@ -12,3 +12,5 @@ __pycache__/
 # Кэши инструментов
 .pytest_cache/
 .ruff_cache/
+# Данные
+data/
