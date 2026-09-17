@@ -9,3 +9,5 @@ DATABASE_URL = os.getenv('DATABASE_URL',
 
 NETWORKS_TABLE = 'a_spiridonov_networks'
 STATIONS_TABLE = 'a_spiridonov_stations'
+
+HDFS_DM_PATH = 'hdfs://namenode:8020/user/a_spiridonov/dm'

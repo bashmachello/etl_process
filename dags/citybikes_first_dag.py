@@ -36,6 +36,11 @@ def _load_stations() -> None:
     finally:
         engine.dispose()
 
+def _build_datamart() -> None:
+    from thirdsemestrwork.datamart import run_datamart
+
+    run_datamart()
+
 with DAG(
     dag_id='citybikes_load',
     start_date=datetime(2026, 9, 15),
@@ -47,5 +52,7 @@ with DAG(
     create = PythonOperator(task_id='create_tables', python_callable=_create_tables)
     networks = PythonOperator(task_id='load_networks', python_callable=_load_networks)
     stations = PythonOperator(task_id='load_stations', python_callable=_load_stations)
+    mart = PythonOperator(task_id='mart', python_callable=_build_datamart)
 
     create >> [networks, stations]
+    [networks, stations] >> mart
