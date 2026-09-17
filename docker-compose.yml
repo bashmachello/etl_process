@@ -1,5 +1,8 @@
 x-airflow-common: &airflow-common
-  image: apache/airflow:3.3.1
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: citybikes-airflow:3.3.1
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://etl:etl@postgres/airflow
@@ -37,6 +40,31 @@ services:
       retries: 5
       start_period: 5s
     restart: always
+
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: citybikes-namemode
+    env_file:
+      - ./hadoop.env
+    environment:
+      - CLUSTER_NAME=citybikes
+    ports:
+      - "9870:9870"
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+    restart: always
+
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: citybikes-datanode
+    env_file:
+      - ./hadoop.env
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+    volumes:
+      - hadoop_datanode:/hadoop/dfs/data
+    restart: always
+
 
   airflow-init:
     <<: *airflow-common
@@ -98,3 +126,5 @@ services:
 volumes:
   postgres_data:
   airflow_logs:
+  hadoop_namenode:
+  hadoop_datanode:
