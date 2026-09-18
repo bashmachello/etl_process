@@ -90,7 +90,14 @@ services:
       start_period: 5s
     restart: always
 
-
+  metabase:
+    image: metabase/metabase:v0.63.18
+    container_name: citybikes-metabase
+    ports:
+      - "3000:3000"
+    volumes:
+      - metabase_data:/metabase.db
+    restart: always
 
   airflow-init:
     <<: *airflow-common
@@ -155,3 +162,4 @@ volumes:
   hadoop_namenode:
   hadoop_datanode:
   clickhouse_data:
+  metabase_data:
