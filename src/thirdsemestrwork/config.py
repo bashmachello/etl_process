@@ -11,3 +11,10 @@ NETWORKS_TABLE = 'a_spiridonov_networks'
 STATIONS_TABLE = 'a_spiridonov_stations'
 
 HDFS_DM_PATH = 'hdfs://namenode:8020/user/a_spiridonov/dm'
+
+CH_HOST = 'clickhouse'
+CH_PORT = 8123
+CH_USER = 'etl'
+CH_PASSWORD = 'etl'
+CH_DATABASE = 'citybikes'
+CH_DM_TABLE = 'a_spiridonov_dm'

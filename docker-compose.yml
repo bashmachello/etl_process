@@ -65,6 +65,32 @@ services:
       - hadoop_datanode:/hadoop/dfs/data
     restart: always
 
+  clickhouse:
+    image: clickhouse/clickhouse-server:26.8.6
+    container_name: citybikes-clickhouse
+    environment:
+      CLICKHOUSE_DB: citybikes
+      CLICKHOUSE_USER: etl
+      CLICKHOUSE_PASSWORD: etl
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--user", "etl", "--password", "etl", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+
 
   airflow-init:
     <<: *airflow-common
@@ -128,3 +154,4 @@ volumes:
   airflow_logs:
   hadoop_namenode:
   hadoop_datanode:
+  clickhouse_data:

@@ -11,4 +11,6 @@ RUN apt-get update \
 USER airflow
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
-RUN pip install --no-cache-dir pyspark==4.2.0
+RUN pip install --no-cache-dir \
+    pyspark==4.2.0 \
+    clickhouse-connect==1.8.0

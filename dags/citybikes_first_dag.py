@@ -41,6 +41,11 @@ def _build_datamart() -> None:
 
     run_datamart()
 
+def _load_to_clickhouse() -> None:
+    from thirdsemestrwork.ch_load import run_ch_load
+
+    run_ch_load()
+
 with DAG(
     dag_id='citybikes_load',
     start_date=datetime(2026, 9, 15),
@@ -53,6 +58,8 @@ with DAG(
     networks = PythonOperator(task_id='load_networks', python_callable=_load_networks)
     stations = PythonOperator(task_id='load_stations', python_callable=_load_stations)
     mart = PythonOperator(task_id='mart', python_callable=_build_datamart)
+    ch = PythonOperator(task_id='ch', python_callable=_load_to_clickhouse)
 
     create >> [networks, stations]
     [networks, stations] >> mart
+    mart >> ch
