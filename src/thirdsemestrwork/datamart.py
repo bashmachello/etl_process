@@ -105,7 +105,7 @@ def build_datamart(spark: SparkSession) -> None:
     ).alias('s')
 
     dm = (
-        sts_parsed.join(nets_parsed, F.col('s.network_id') == F.col('n.id'))
+        nets_parsed.join(sts_parsed, F.col('s.network_id') == F.col('n.id'), 'left')
         .select(
             F.col('n.id').alias('network_id'),
             F.trim(F.col('n.network_name')).alias('network_name'),

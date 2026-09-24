@@ -23,7 +23,7 @@ DM_COLUMNS = """
     country Nullable(String),
     company Array(String),
     system Nullable(String),
-    station_id String,
+    station_id Nullable(String),
     station_name Nullable(String),
     station_latitude Nullable(Float64),
     station_longitude Nullable(Float64),
@@ -62,7 +62,7 @@ def run_ch_load() -> None:
         client.command(f'''
             CREATE OR REPLACE TABLE {CH_DM_TABLE} ({DM_COLUMNS})
             ENGINE = MergeTree
-            ORDER BY (network_id, station_id)
+            ORDER BY network_id
         ''')
         client.command(f'INSERT INTO {CH_DM_TABLE} SELECT * FROM {HDFS_TABLE}')
 
