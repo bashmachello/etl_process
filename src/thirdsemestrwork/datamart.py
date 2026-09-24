@@ -31,8 +31,8 @@ LOCATION_SCHEMA = StructType([
 COMPANY_SCHEMA = ArrayType(StringType())
 
 EXTRA_SCHEMA = StructType([
-    StructField('renting', BooleanType()),
-    StructField('returning', BooleanType()),
+    StructField('renting', StringType()),
+    StructField('returning', StringType()),
     StructField('last_updated', StringType()),
     StructField('slots', IntegerType()),
     StructField('ebikes', IntegerType()),
@@ -53,6 +53,13 @@ def _jdbc_settings(url: str) -> dict:
         'password': password,
         'driver': 'org.postgresql.Driver',
     }
+
+def _to_bool(col):
+    v = F.lower(F.trim(col))
+    return (
+        F.when(v.isin('1', 'true'), F.lit(True))
+        .when(v.isin('0', 'false'), F.lit(False))
+    )
 
 def _parse_datetime(col):
     as_double = col.try_cast('double')
@@ -115,8 +122,8 @@ def build_datamart(spark: SparkSession) -> None:
             _parse_datetime(F.col('s.timestamp')).alias('timestamp'),
             F.col('s.bikes').cast('int').alias('free_bikes'),
             F.col('s.free').cast('int').alias('empty_slots'),
-            F.col('s.ex.renting'),
-            F.col('s.ex.returning'),
+            _to_bool(F.col('s.ex.renting')).alias('renting'),
+            _to_bool(F.col('s.ex.returning')).alias('returning'),
             _parse_datetime(F.col('s.ex.last_updated')).alias('last_updated'),
             F.col('s.ex.slots').cast('int').alias('slots'),
             F.col('s.ex.ebikes').cast('int').alias('ebikes'),
