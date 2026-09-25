@@ -15,16 +15,16 @@ networks_table = Table(
     metadata,
 Column('id', String, primary_key=True),
     Column('name', Text),
-    Column('location', JSONB),
+    Column('location', JSONB(none_as_null=True)),
     Column('href', Text),
-    Column('company', JSONB),
+    Column('company', JSONB(none_as_null=True)),
     Column('system', Text),
     Column('gbfs_href', Text),
     Column('source', Text),
-    Column('license', JSONB),
+    Column('license', JSONB(none_as_null=True)),
     Column('ebikes', Boolean),
     Column('scooters', Boolean),
-    Column('instances', JSONB),
+    Column('instances', JSONB(none_as_null=True)),
 )
 
 stations_table = Table(
@@ -38,7 +38,7 @@ Column('network_id', String, primary_key=True),
     Column('timestamp', Text),
     Column('bikes', Integer),
     Column('free', Integer),
-    Column('extra', JSONB),
+    Column('extra', JSONB(none_as_null=True)),
 )
 
 NETWORK_FIELDS = ['id', 'name', 'location', 'href', 'company', 'system', 'gbfs_href', 'source', 'license', 'ebikes', 'scooters', 'instances']
