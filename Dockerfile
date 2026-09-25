@@ -9,8 +9,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 USER airflow
-ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
 RUN pip install --no-cache-dir \
     pyspark==4.2.0 \
     clickhouse-connect==1.8.0
+
+ARG TARGETARCH
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-${TARGETARCH}
