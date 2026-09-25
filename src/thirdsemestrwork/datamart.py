@@ -62,11 +62,13 @@ def _to_bool(col):
     )
 
 def _parse_datetime(col):
-    as_double = col.try_cast('double')
+    s = F.regexp_replace(F.trim(col), r'\+00:00Z$', 'Z')
+    num = s.try_cast('double')
+    epoch = F.when(num >= 1e11, num / 1000).otherwise(num)
     return F.coalesce(
-        F.try_to_timestamp(col),
-        F.when(F.length(col) >= 11, (as_double / 1000).cast('timestamp'))
-        .otherwise(as_double.cast('timestamp'))
+        F.try_to_timestamp(s),
+        F.try_to_timestamp(s, F.lit('dd/MM/yyyy HH:mm:ss')),
+        epoch.cast('timestamp')
     )
 
 def build_datamart(spark: SparkSession) -> None:
@@ -157,6 +159,7 @@ def run_datamart() -> None:
         .config('spark.sql.shuffle.partitions', '4')
         .config('spark.jars.packages', 'org.postgresql:postgresql:42.7.4')
         .config('spark.ui.enabled', 'false')
+        .config('spark.sql.session.timeZone', 'UTC')
         .getOrCreate()
     )
     try:
