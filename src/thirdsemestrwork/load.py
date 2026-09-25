@@ -47,7 +47,7 @@ NETWORK_FIELDS = ['id', 'name', 'location', 'href', 'company', 'system', 'gbfs_h
 def create_tables(engine) -> None:
     """Создаем таблицы если их нет"""
     metadata.create_all(engine)
-    logger.info('Таблицы созданы: %s, %s', NETWORK_FIELDS, STATIONS_TABLE)
+    logger.info('Таблицы созданы: %s, %s', NETWORKS_TABLE, STATIONS_TABLE)
 
 def insert_networks(engine, networks: list[dict]) -> None:
     rows = []
@@ -60,11 +60,12 @@ def insert_networks(engine, networks: list[dict]) -> None:
     if skipped:
         logger.warning('Пропущено networks без id: %d', skipped)
 
+    inserted = 0
     with engine.begin() as conn:
         for i in range(0, len(rows), 500):
             stmt = insert(networks_table).values(rows[i:i + 500])
-            conn.execute(stmt.on_conflict_do_nothing(index_elements=['id']))
-    logger.info('networks записано %d', len(rows))
+            inserted += conn.execute(stmt.on_conflict_do_nothing(index_elements=['id'])).rowcount
+    logger.info('networks записано %d, дублей пропущено %d', inserted, len(rows) - inserted)
 
 
 def _station_id(network_id: str, station: dict) -> str:
@@ -84,11 +85,12 @@ def insert_stations(engine, stations: list[dict]) -> None:
         'extra': st.get('extra'),
         } for st in stations]
 
+    inserted = 0
     with engine.begin() as conn:
         for i in range(0, len(rows), 1000):
             stmt = insert(stations_table).values(rows[i:i + 1000])
-            conn.execute(stmt.on_conflict_do_nothing(index_elements=['network_id', 'station_id']))
-    logger.info('stations записано %d', len(rows))
+            inserted += conn.execute(stmt.on_conflict_do_nothing(index_elements=['network_id', 'station_id'])).rowcount
+    logger.info('stations записано %d, дублей пропущено %d', inserted, len(rows) - inserted)
 
 def get_engine():
     return create_engine(DATABASE_URL)

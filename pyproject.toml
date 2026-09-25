@@ -33,5 +33,5 @@ testpaths = ['tests']
 line-length =  100
 src = ['src']
 
-[tool.roof.lint]
+[tool.ruff.lint]
 select = ['E', 'F', 'W', 'I', 'UP', 'B']
