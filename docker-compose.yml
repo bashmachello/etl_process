@@ -8,10 +8,17 @@ x-airflow-common: &airflow-common
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://etl:etl@postgres/airflow
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-api-server:8080/execution/
-    AIRFLOW__API_AUTH__JWT_SECRET: 'c7d7f583a5937fc577be2482637bffe3e06acc86d5983bf558b72e5d34750a63c4df5ab519aad814f715b9dd7b08bbe8c74bb19f202d5f1482f1c507834f2e1b'
+    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW__API_AUTH__JWT_SECRET:?set in .env, see .env.example}
     AIRFLOW__API_AUTH__JWT_ISSUER: airflow
     DATABASE_URL: postgresql+psycopg2://etl:etl@postgres:5432/citybikes
     PYTHONPATH: /opt/airflow/src
+    CH_HOST: ${CH_HOST:-clickhouse}
+    CH_PORT: ${CH_PORT:-8123}
+    CH_USER: ${CH_USER:-etl}
+    CH_PASSWORD: ${CH_PASSWORD:-etl}
+    CH_DATABASE: ${CH_DATABASE:-citybikes}
+    CH_DM_TABLE: ${CH_DM_TABLE:-a_spiridonov_dm}
+    HDFS_DM_PATH: ${HDFS_DM_PATH:-hdfs://namenode:8020/user/a_spiridonov/dm}
   volumes:
     - ./dags:/opt/airflow/dags
     - ./src:/opt/airflow/src
