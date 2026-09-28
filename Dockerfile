@@ -16,3 +16,7 @@ RUN pip install --no-cache-dir \
 
 ARG TARGETARCH
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-${TARGETARCH}
+
+RUN mkdir -p /home/airflow/jars \
+    && curl -fL -o /home/airflow/jars/postgresql-42.7.4.jar \
+       https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.4/postgresql-42.7.4.jar

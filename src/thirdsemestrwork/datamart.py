@@ -143,8 +143,6 @@ def build_datamart(spark: SparkSession) -> None:
         )
     )
 
-    total = dm.count()
-    logger.info('Витрина собрана %d строк', total)
     dm.printSchema()
 
     dm.write.mode('overwrite').parquet(HDFS_DM_PATH)
@@ -157,7 +155,7 @@ def run_datamart() -> None:
         .master('local[2]')
         .config('spark.driver.memory', '2g')
         .config('spark.sql.shuffle.partitions', '4')
-        .config('spark.jars.packages', 'org.postgresql:postgresql:42.7.4')
+        .config('spark.jars', '/home/airflow/jars/postgresql-42.7.4.jar')
         .config('spark.ui.enabled', 'false')
         .config('spark.sql.session.timeZone', 'UTC')
         .getOrCreate()
