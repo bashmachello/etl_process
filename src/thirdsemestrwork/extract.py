@@ -3,7 +3,6 @@ import logging
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
-#from thirdsemestrwork.config import DATA_DIR
 
 def load_networks(data_dir: Path) -> list[dict]:
     """Читает networks, возвращает списокй записей"""
