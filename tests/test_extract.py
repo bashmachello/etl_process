@@ -1,8 +1,8 @@
 import json
-from pathlib import Path
 
 from thirdsemestrwork.extract import load_networks, load_stations
 from thirdsemestrwork.load import _station_id
+
 
 def test_station_id_stable_and_unique():
     st = {'name': 'A', 'latitude': 1.0, 'longitude': 2.0}

@@ -1,7 +1,17 @@
-import logging
 import hashlib
+import logging
 
-from sqlalchemy import Boolean, Column, Double, Integer, MetaData, String, Table, Text, create_engine
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Double,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    Text,
+    create_engine,
+)
 from sqlalchemy.dialects.postgresql import JSONB, insert
 
 from thirdsemestrwork.config import DATABASE_URL, NETWORKS_TABLE, STATIONS_TABLE
@@ -41,7 +51,8 @@ Column('network_id', String, primary_key=True),
     Column('extra', JSONB(none_as_null=True)),
 )
 
-NETWORK_FIELDS = ['id', 'name', 'location', 'href', 'company', 'system', 'gbfs_href', 'source', 'license', 'ebikes', 'scooters', 'instances']
+NETWORK_FIELDS = ['id', 'name', 'location', 'href', 'company', 'system',
+                  'gbfs_href', 'source', 'license', 'ebikes', 'scooters', 'instances']
 
 
 def create_tables(engine) -> None:

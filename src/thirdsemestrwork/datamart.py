@@ -12,12 +12,7 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from thirdsemestrwork.config import (
-    DATABASE_URL,
-    HDFS_DM_PATH,
-    NETWORKS_TABLE,
-    STATIONS_TABLE
-)
+from thirdsemestrwork.config import DATABASE_URL, HDFS_DM_PATH, NETWORKS_TABLE, STATIONS_TABLE
 
 logger = logging.getLogger(__name__)
 

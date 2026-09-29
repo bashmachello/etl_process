@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from airflow.sdk import DAG
 from airflow.providers.standard.operators.python import PythonOperator
+from airflow.sdk import DAG
+
 
 def _create_tables() -> None:
     from thirdsemestrwork.load import create_tables, get_engine
@@ -50,12 +51,19 @@ def _load_to_clickhouse() -> None:
 
 def _check_counts() -> None:
     import logging
+
     import clickhouse_connect
     from sqlalchemy import text
 
     from thirdsemestrwork.config import (
-        CH_DATABASE, CH_DM_TABLE, CH_HOST, CH_PASSWORD,
-        CH_PORT, CH_USER, NETWORKS_TABLE, STATIONS_TABLE,
+        CH_DATABASE,
+        CH_DM_TABLE,
+        CH_HOST,
+        CH_PASSWORD,
+        CH_PORT,
+        CH_USER,
+        NETWORKS_TABLE,
+        STATIONS_TABLE,
     )
     from thirdsemestrwork.load import get_engine
 
@@ -64,7 +72,8 @@ def _check_counts() -> None:
     engine = get_engine()
     try:
         with engine.connect() as conn:
-            q = lambda sql: conn.execute(text(sql)).scalar_one()
+            def q(sql: str):
+                return conn.execute(text(sql)).scalar_one()
             pg_networks = q(f'SELECT count(*) FROM {NETWORKS_TABLE}')
             pg_stations = q(f'SELECT count(*) FROM {STATIONS_TABLE}')
             pg_stations_no_net  = q(f'''SELECT count(*) FROM {STATIONS_TABLE} s
@@ -88,7 +97,8 @@ def _check_counts() -> None:
         password=CH_PASSWORD, database=CH_DATABASE
     )
     try:
-        c = lambda sql: ch.command(sql)
+        def c(sql: str):
+            return ch.command(sql)
         ch_total = c(f'SELECT count() FROM {CH_DM_TABLE}')
         ch_stations = c(f'SELECT count(station_id) FROM {CH_DM_TABLE}')
         ch_networks = c(f'SELECT uniqExact(network_id) FROM {CH_DM_TABLE}')
@@ -119,9 +129,11 @@ def _check_counts() -> None:
     if problems:
         raise RuntimeError('Check false: ' + '; '.join(problems))
 
-    log.info('Check complete: networks %d, stations %d (in Postgres %d, inc %d without records about network), '
+    log.info('Check complete: networks %d, stations %d '
+             '(in Postgres %d, inc %d without records about network), '
              'renting filled %d, timestamp filled %d, rows in datamart %d',
-             ch_networks, ch_stations, pg_stations, pg_stations_no_net, ch_renting, ch_ts, ch_total)
+             ch_networks, ch_stations, pg_stations, pg_stations_no_net,
+             ch_renting, ch_ts, ch_total)
 
 with DAG(
     dag_id='citybikes_load',
