@@ -15,14 +15,14 @@ from thirdsemestrwork.config import (
 logger = logging.getLogger(__name__)
 
 DM_COLUMNS = """
-    network_id String,
+    network_id LowCardinality(String),
     network_name Nullable(String),
     network_latitude Nullable(Float64),
     network_longitude Nullable(Float64),
-    city Nullable(String),
-    country Nullable(String),
+    city LowCardinality(Nullable(String)),
+    country LowCardinality(Nullable(String)),
     company Array(String),
-    system Nullable(String),
+    system LowCardinality(Nullable(String)),
     station_id Nullable(String),
     station_name Nullable(String),
     station_latitude Nullable(Float64),
@@ -60,11 +60,17 @@ def run_ch_load() -> None:
             ENGINE=HDFS('{HDFS_DM_PATH}/*.parquet', 'Parquet')
         ''')
         client.command(f'''
-            CREATE OR REPLACE TABLE {CH_DM_TABLE} ({DM_COLUMNS})
+            CREATE TABLE IF NOT EXISTS {CH_DM_TABLE} ({DM_COLUMNS})
             ENGINE = MergeTree
             ORDER BY network_id
         ''')
-        client.command(f'INSERT INTO {CH_DM_TABLE} SELECT * FROM {HDFS_TABLE}')
+        client.command(f'''
+            CREATE OR REPLACE TABLE {CH_DM_TABLE}_new ({DM_COLUMNS})
+            ENGINE = MergeTree
+            ORDER BY network_id
+        ''')
+        client.command(f'INSERT INTO {CH_DM_TABLE}_new SELECT * FROM {HDFS_TABLE}')
+        client.command(f'''EXCHANGE TABLES {CH_DM_TABLE} AND {CH_DM_TABLE}_new''')
 
         count = client.command(f'SELECT count() FROM {CH_DM_TABLE}')
         logger.info('Витрина в ClickHouse %s строк', count)
