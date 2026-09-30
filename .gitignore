@@ -14,3 +14,4 @@ __pycache__/
 .ruff_cache/
 # Данные
 data/
+readme2.md
