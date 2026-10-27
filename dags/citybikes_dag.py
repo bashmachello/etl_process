@@ -148,6 +148,7 @@ with DAG(
     start_date=datetime(2026, 9, 15),
     schedule=None,
     catchup=False,
+    max_active_runs=1,
     default_args={'retries': 2, 'retry_delay': timedelta(minutes=1)},
     tags=['citybikes', 'first', 'load', 'spiridonov'],
     doc_md=__doc__,
