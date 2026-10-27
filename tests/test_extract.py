@@ -51,3 +51,13 @@ def test_load_stations_api_field_names(tmp_path):
     rows = load_stations(tmp_path)
     assert rows[0]['bikes'] == 7 and rows[0]['free'] == 4
     assert rows[1]['bikes'] == 0
+
+def test_station_id_prefers_native_id():
+    st = {'id': 'vec_42', 'name': 'A', 'latitude': 1.0, 'longitude': 2.0}
+    assert _station_id('net', st) == 'vec_42'
+
+
+def test_station_id_int_and_float_coords_same_key():
+    a = _station_id('net', {'name': 'A', 'latitude': 1, 'longitude': 2})
+    b = _station_id('net', {'name': 'A', 'latitude': 1.0, 'longitude': 2.0})
+    assert a == b

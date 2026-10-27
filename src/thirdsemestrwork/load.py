@@ -96,9 +96,16 @@ def insert_networks(engine, networks: list[dict]) -> None:
             inserted += result.rowcount
     logger.info('networks: вставлено/обновлено %d из %d', inserted, len(rows))
 
+def _norm_coord(value):
+    return None if value is None else float(value)
 
 def _station_id(network_id: str, station: dict) -> str:
-    raw = f"{network_id}|{station.get('name')}|{station.get('latitude')}|{station.get('longitude')}"
+    native = station.get('id')
+    if native is not None:
+        return str(native)
+    raw = (f"{network_id}|{station.get('name')}"
+           f"|{_norm_coord(station.get('latitude'))}"
+           f"|{_norm_coord(station.get('longitude'))}")
     return hashlib.md5(raw.encode('utf-8')).hexdigest()
 
 def insert_stations(engine, stations: list[dict]) -> None:
@@ -127,6 +134,9 @@ def insert_stations(engine, stations: list[dict]) -> None:
             result = conn.execute(stmt.on_conflict_do_update(
                 index_elements=['network_id', 'station_id'],
                 set_={
+                    'name': stmt.excluded.name,
+                    'latitude': stmt.excluded.latitude,
+                    'longitude': stmt.excluded.longitude,
                     'timestamp': stmt.excluded.timestamp,
                     'bikes': stmt.excluded.bikes,
                     'free': stmt.excluded.free,
