@@ -16,7 +16,12 @@ def load_networks(data_dir: Path) -> list[dict]:
 def load_stations(data_dir: Path) -> list[dict]:
     """Читает stations, возвращает списокй записей"""
     stations: list[dict] = []
-    files = sorted((data_dir / 'stations_output').glob('*.json'))
+    stations_dir = data_dir / 'stations_output'
+    if not stations_dir.is_dir():
+        raise FileNotFoundError(f'Каталог со станциями не найден: {stations_dir}')
+    files = sorted(stations_dir.glob('*.json'))
+    if not files:
+        raise FileNotFoundError(f'В {stations_dir} нет ни одного *.json')
     logger.info('Файлов в stations: %s', len(files))
 
     for f in files:
@@ -41,5 +46,3 @@ def load_stations(data_dir: Path) -> list[dict]:
             stations.append(row)
     logger.info('stations прочитано: %d', len(stations))
     return stations
-
-#load_stations(DATA_DIR)

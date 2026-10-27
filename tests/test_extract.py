@@ -1,4 +1,5 @@
 import json
+import pytest
 
 from thirdsemestrwork.extract import load_networks, load_stations
 from thirdsemestrwork.load import _station_id
@@ -61,3 +62,13 @@ def test_station_id_int_and_float_coords_same_key():
     a = _station_id('net', {'name': 'A', 'latitude': 1, 'longitude': 2})
     b = _station_id('net', {'name': 'A', 'latitude': 1.0, 'longitude': 2.0})
     assert a == b
+
+def test_load_stations_missing_dir_fails(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        load_stations(tmp_path)
+
+
+def test_load_stations_empty_dir_fails(tmp_path):
+    (tmp_path / 'stations_output').mkdir()
+    with pytest.raises(FileNotFoundError):
+        load_stations(tmp_path)
