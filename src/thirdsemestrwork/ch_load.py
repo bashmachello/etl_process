@@ -60,18 +60,29 @@ def run_ch_load() -> None:
             ENGINE=HDFS('{HDFS_DM_PATH}/*.parquet', 'Parquet')
         ''')
         client.command(f'''
+                    CREATE OR REPLACE TABLE {CH_DM_TABLE}_new ({DM_COLUMNS})
+                    ENGINE = MergeTree
+                    ORDER BY network_id
+                ''')
+        client.command(f'INSERT INTO {CH_DM_TABLE}_new SELECT * FROM {HDFS_TABLE}')
+    finally:
+        client.close()
+
+def run_ch_publish() -> None:
+    client = clickhouse_connect.get_client(
+        host=CH_HOST,
+        port=CH_PORT,
+        username=CH_USER,
+        password=CH_PASSWORD,
+        database=CH_DATABASE,
+    )
+    try:
+        client.command(f'''
             CREATE TABLE IF NOT EXISTS {CH_DM_TABLE} ({DM_COLUMNS})
             ENGINE = MergeTree
             ORDER BY network_id
         ''')
-        client.command(f'''
-            CREATE OR REPLACE TABLE {CH_DM_TABLE}_new ({DM_COLUMNS})
-            ENGINE = MergeTree
-            ORDER BY network_id
-        ''')
-        client.command(f'INSERT INTO {CH_DM_TABLE}_new SELECT * FROM {HDFS_TABLE}')
         client.command(f'''EXCHANGE TABLES {CH_DM_TABLE} AND {CH_DM_TABLE}_new''')
-
         count = client.command(f'SELECT count() FROM {CH_DM_TABLE}')
         logger.info('Витрина в ClickHouse %s строк', count)
     finally:

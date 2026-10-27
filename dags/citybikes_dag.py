@@ -103,13 +103,14 @@ def _check_counts() -> None:
     try:
         def c(sql: str):
             return ch.command(sql)
-        ch_total = c(f'SELECT count() FROM {CH_DM_TABLE}')
-        ch_stations = c(f'SELECT count(station_id) FROM {CH_DM_TABLE}')
-        ch_bikes = c(f'SELECT countIf(isNotNull(free_bikes)) FROM {CH_DM_TABLE}')
-        ch_networks = c(f'SELECT uniqExact(network_id) FROM {CH_DM_TABLE}')
-        hdfs_rows = c(f'SELECT count() FROM {CH_DM_TABLE}_hdfs')
-        ch_renting = c(f'SELECT countIf(isNotNull(renting)) FROM {CH_DM_TABLE}')
-        ch_ts = c(f'SELECT countIf(isNotNull(timestamp)) FROM {CH_DM_TABLE}')
+        cand = f'{CH_DM_TABLE}_new'
+        ch_total = c(f'SELECT count() FROM {cand}')
+        ch_stations = c(f'SELECT count(station_id) FROM {cand}')
+        ch_bikes = c(f'SELECT countIf(isNotNull(free_bikes)) FROM {cand}')
+        ch_networks = c(f'SELECT uniqExact(network_id) FROM {cand}')
+        hdfs_rows = c(f'SELECT count() FROM {cand}_hdfs')
+        ch_renting = c(f'SELECT countIf(isNotNull(renting)) FROM {cand}')
+        ch_ts = c(f'SELECT countIf(isNotNull(timestamp)) FROM {cand}')
     finally:
         ch.close()
 
@@ -143,6 +144,10 @@ def _check_counts() -> None:
              ch_networks, ch_stations, pg_stations, pg_stations_no_net,
              ch_renting, ch_ts, ch_total)
 
+def _publish_ch() -> None:
+    from thirdsemestrwork.ch_load import run_ch_publish
+    run_ch_publish()
+
 with DAG(
     dag_id='citybikes_load',
     start_date=datetime(2026, 9, 15),
@@ -157,10 +162,10 @@ with DAG(
     networks = PythonOperator(task_id='load_networks', python_callable=_load_networks)
     stations = PythonOperator(task_id='load_stations', python_callable=_load_stations)
     mart = PythonOperator(task_id='mart', python_callable=_build_datamart)
-    ch = PythonOperator(task_id='ch', python_callable=_load_to_clickhouse)
+    ch = PythonOperator(task_id='load_to_clickhouse', python_callable=_load_to_clickhouse)
     check = PythonOperator(task_id='check_counts', python_callable=_check_counts)
+    publish = PythonOperator(task_id='publish_to_clickhouse', python_callable=_publish_ch)
 
     create >> [networks, stations]
     [networks, stations] >> mart
-    mart >> ch
-    ch >> check
+    mart >> ch >> check >> publish
