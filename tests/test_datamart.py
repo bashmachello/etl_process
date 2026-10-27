@@ -10,7 +10,7 @@ os.environ.setdefault('PYSPARK_PYTHON', sys.executable)
 from pyspark.sql import SparkSession  # noqa: E402
 from pyspark.sql import functions as F
 
-from thirdsemestrwork.datamart import _parse_datetime, _to_bool  # noqa: E402
+from thirdsemestrwork.datamart import _parse_datetime, _to_bool, _jdbc_settings  # noqa: E402
 
 
 @pytest.fixture(scope='module')
@@ -69,3 +69,9 @@ def test_to_bool(spark, value, expected):
 ])
 def test_parse_datetime(spark, value, expected):
     assert one_ts(spark, value) == expected
+
+def test_jdbc_settings_decodes_percent_encoding():
+    s = _jdbc_settings('postgresql+psycopg2://etl:p%40ss%2Fword@postgres:5432/citybikes')
+    assert s['user'] == 'etl'
+    assert s['password'] == 'p@ss/word'
+    assert s['url'] == 'jdbc:postgresql://postgres:5432/citybikes'

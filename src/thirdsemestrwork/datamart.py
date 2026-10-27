@@ -11,6 +11,7 @@ from pyspark.sql.types import (
     StructField,
     StructType,
 )
+from sqlalchemy import make_url
 
 from thirdsemestrwork.config import DATABASE_URL, HDFS_DM_PATH, NETWORKS_TABLE, STATIONS_TABLE
 
@@ -39,13 +40,11 @@ EXTRA_SCHEMA = StructType([
 ])
 
 def _jdbc_settings(url: str) -> dict:
-    rest = url.split('://', 1)[1]
-    creds, host_db = rest.rsplit('@', 1)
-    user, password = creds.split(':', 1)
+    u = make_url(url)
     return {
-        'url': f'jdbc:postgresql://{host_db}',
-        'user': user,
-        'password': password,
+        'url': f'jdbc:postgresql://{u.host}:{u.port or 5432}/{u.database}',
+        'user': u.username,
+        'password': u.password,
         'driver': 'org.postgresql.Driver',
     }
 
