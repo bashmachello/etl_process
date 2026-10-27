@@ -34,6 +34,10 @@ def load_stations(data_dir: Path) -> list[dict]:
         for station in file_stations:
             row = dict(station)
             row['network_id'] = network_id
+            if row.get('bikes') is None:
+                row['bikes'] = row.get('free_bikes')
+            if row.get('free') is None:
+                row['free'] = row.get('empty_slots')
             stations.append(row)
     logger.info('stations прочитано: %d', len(stations))
     return stations

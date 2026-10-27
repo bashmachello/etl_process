@@ -75,6 +75,10 @@ def _check_counts() -> None:
             def q(sql: str):
                 return conn.execute(text(sql)).scalar_one()
             pg_networks = q(f'SELECT count(*) FROM {NETWORKS_TABLE}')
+            pg_bikes = q(f'SELECT count(*) FROM {STATIONS_TABLE} WHERE bikes IS NOT NULL')
+            pg_bikes_no_net = q('''SELECT count(*) FROM {STATIONS_TABLE} s
+                                LEFT JOIN {NETWORKS_TABLE} n ON s.network_id = n.id
+                                WHERE n.id IS NULL ANS s.bikes IS NOT NULL''')
             pg_stations = q(f'SELECT count(*) FROM {STATIONS_TABLE}')
             pg_stations_no_net  = q(f'''SELECT count(*) FROM {STATIONS_TABLE} s
                 LEFT JOIN {NETWORKS_TABLE} n ON s.network_id = n.id
@@ -101,6 +105,7 @@ def _check_counts() -> None:
             return ch.command(sql)
         ch_total = c(f'SELECT count() FROM {CH_DM_TABLE}')
         ch_stations = c(f'SELECT count(station_id) FROM {CH_DM_TABLE}')
+        ch_bikes = c(f'SELECT countIf(isNotNull(free_bikes)) FROM {CH_DM_TABLE}')
         ch_networks = c(f'SELECT uniqExact(network_id) FROM {CH_DM_TABLE}')
         hdfs_rows = c(f'SELECT count() FROM {CH_DM_TABLE}_hdfs')
         ch_renting = c(f'SELECT countIf(isNotNull(renting)) FROM {CH_DM_TABLE}')
@@ -111,6 +116,9 @@ def _check_counts() -> None:
     problems = []
     if ch_networks != pg_networks:
         problems.append(f'networks: in Postgres {pg_networks}, in datamart {ch_networks}')
+    if ch_bikes != pg_bikes - pg_bikes_no_net:
+        problems.append(f'free_bikes: in Postgres {pg_bikes - pg_bikes_no_net}, '
+                        f'in datamart {ch_bikes}')
     if ch_stations != pg_stations - pg_stations_no_net:
         problems.append(
             f'stations: in Postgres {pg_stations} '

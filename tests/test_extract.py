@@ -40,3 +40,14 @@ def test_load_stations_empty_and_missing(tmp_path):
     (d / 'stations_empty.json').write_text('{"stations": []}', encoding='utf-8')
     (d / 'stations_no_key.json').write_text('{}', encoding='utf-8')
     assert load_stations(tmp_path) == []
+
+def test_load_stations_api_field_names(tmp_path):
+    d = tmp_path / 'stations_output'
+    d.mkdir()
+    (d / 'stations_api.json').write_text(json.dumps({'stations': [
+        {'name': 'API', 'free_bikes': 7, 'empty_slots': 4},
+        {'name': 'TCH', 'bikes': 0, 'free': 2},
+    ]}), encoding='utf-8')
+    rows = load_stations(tmp_path)
+    assert rows[0]['bikes'] == 7 and rows[0]['free'] == 4
+    assert rows[1]['bikes'] == 0
