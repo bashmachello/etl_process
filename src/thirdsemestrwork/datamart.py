@@ -1,6 +1,6 @@
 import logging
 
-from pyspark.sql import SparkSession
+from pyspark.sql import Column, DataFrame, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import (
     ArrayType,
@@ -39,7 +39,10 @@ EXTRA_SCHEMA = StructType([
     StructField('post_code', StringType()),
 ])
 
-def _jdbc_settings(url: str) -> dict:
+def _jdbc_settings(url: str) -> dict[str, str]:
+    """Строит параметры JDBC-подключения к БД из DATABASE_URL
+
+    Логин/пароль берутся через make_url"""
     u = make_url(url)
     return {
         'url': f'jdbc:postgresql://{u.host}:{u.port or 5432}/{u.database}',
@@ -48,14 +51,16 @@ def _jdbc_settings(url: str) -> dict:
         'driver': 'org.postgresql.Driver',
     }
 
-def _to_bool(col):
+def _to_bool(col: Column) -> Column:
+    """Превращает extra поле в bool"""
     v = F.lower(F.trim(col))
     return (
         F.when(v.isin('1', 'true'), F.lit(True))
         .when(v.isin('0', 'false'), F.lit(False))
     )
 
-def _parse_datetime(col):
+def _parse_datetime(col: Column) -> Column:
+    """Парсит timestamp: iso строка, затем 'dd/MM/yyyy HH:mm:ss', затем эпоха в сек/мс"""
     s = F.regexp_replace(F.trim(col), r'\+00:00Z$', 'Z')
     num = s.try_cast('double')
     epoch = F.when(num >= 1e11, num / 1000).otherwise(num)
@@ -65,7 +70,8 @@ def _parse_datetime(col):
         epoch.cast('timestamp')
     )
 
-def build_datamart(spark: SparkSession) -> None:
+def build_datamart(spark: SparkSession) -> DataFrame:
+    """Собирает datamart"""
     jdbc = _jdbc_settings(DATABASE_URL)
 
     nets = spark.read.format('jdbc').options(
@@ -124,7 +130,7 @@ def build_datamart(spark: SparkSession) -> None:
             F.col('s.ex.slots').cast('int').alias('slots'),
             F.col('s.ex.ebikes').cast('int').alias('ebikes'),
             F.col('s.ex.has_ebikes'),
-            F.col('s.ex.payment'),
+            F.transform(F.col('s.ex.payment'), lambda x: F.trim(x)).alias('payment'),
             F.col('s.ex').getField('payment-terminal').alias('payment_terminal'),
             F.trim(F.col('s.ex.address')).alias('address'),
             F.trim(F.col('s.ex.post_code')).alias('post_code'),
@@ -143,6 +149,7 @@ def build_datamart(spark: SparkSession) -> None:
     logger.info('Витрина записана %s', HDFS_DM_PATH)
 
 def run_datamart() -> None:
+    """Создает спарк сессию, собирает витрину и пишет parquet в hdfs_dm_path"""
     spark = (
         SparkSession.builder
         .appName('citybikes_datamart')

@@ -1,4 +1,5 @@
 import json
+
 import pytest
 
 from thirdsemestrwork.extract import load_networks, load_stations

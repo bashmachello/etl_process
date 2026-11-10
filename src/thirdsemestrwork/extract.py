@@ -5,7 +5,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 def load_networks(data_dir: Path) -> list[dict]:
-    """Читает networks, возвращает списокй записей"""
+    """Читает networks из data_dir, возвращает список записей"""
     path = data_dir / 'networks.json'
     logger.info('Читаю файл networks: %s', path)
     data = json.loads(path.read_text(encoding='utf-8'))
@@ -14,7 +14,10 @@ def load_networks(data_dir: Path) -> list[dict]:
     return networks
 
 def load_stations(data_dir: Path) -> list[dict]:
-    """Читает stations, возвращает списокй записей"""
+    """Читает stations из stations_output, возвращает список записей
+
+    network_id берется из имени файла, битые json пропускаются,
+    поля API free_bikes/empty_slots нормализуются в bikes/free"""
     stations: list[dict] = []
     stations_dir = data_dir / 'stations_output'
     if not stations_dir.is_dir():

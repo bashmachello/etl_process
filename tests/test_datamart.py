@@ -7,10 +7,10 @@ pytest.importorskip('pyspark', reason='нет pyspark локально: uv sync 
 
 os.environ.setdefault('PYSPARK_PYTHON', sys.executable)
 
-from pyspark.sql import SparkSession  # noqa: E402
+from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
-from thirdsemestrwork.datamart import _parse_datetime, _to_bool, _jdbc_settings  # noqa: E402
+from thirdsemestrwork.datamart import _jdbc_settings, _parse_datetime, _to_bool
 
 
 @pytest.fixture(scope='module')

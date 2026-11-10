@@ -1,3 +1,4 @@
+"""Загрузка витрины из Parquet на HDFS в ClickHouse"""
 import logging
 
 import clickhouse_connect
@@ -47,6 +48,7 @@ DM_COLUMNS = """
 HDFS_TABLE = f'{CH_DM_TABLE}_hdfs'
 
 def run_ch_load() -> None:
+    """Готовит витрину: hdfs таблица над parquet и заливка в таблицу _new"""
     client = clickhouse_connect.get_client(
         host=CH_HOST,
         port=CH_PORT,
@@ -69,6 +71,7 @@ def run_ch_load() -> None:
         client.close()
 
 def run_ch_publish() -> None:
+    """Публикует витрину: создает основную таблицу и меняет ее местами с _new"""
     client = clickhouse_connect.get_client(
         host=CH_HOST,
         port=CH_PORT,

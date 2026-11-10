@@ -13,6 +13,7 @@ from sqlalchemy import (
     create_engine,
 )
 from sqlalchemy.dialects.postgresql import JSONB, insert
+from sqlalchemy.engine import Engine
 
 from thirdsemestrwork.config import DATABASE_URL, NETWORKS_TABLE, STATIONS_TABLE
 
@@ -23,7 +24,7 @@ metadata = MetaData()
 networks_table = Table(
     NETWORKS_TABLE,
     metadata,
-Column('id', String, primary_key=True),
+    Column('id', String, primary_key=True),
     Column('name', Text),
     Column('location', JSONB(none_as_null=True)),
     Column('href', Text),
@@ -40,7 +41,7 @@ Column('id', String, primary_key=True),
 stations_table = Table(
     STATIONS_TABLE,
     metadata,
-Column('network_id', String, primary_key=True),
+    Column('network_id', String, primary_key=True),
     Column('station_id', String, primary_key=True),
     Column('name', Text),
     Column('latitude', Double),
@@ -55,12 +56,15 @@ NETWORK_FIELDS = ['id', 'name', 'location', 'href', 'company', 'system',
                   'gbfs_href', 'source', 'license', 'ebikes', 'scooters', 'instances']
 
 
-def create_tables(engine) -> None:
-    """Создаем таблицы если их нет"""
+def create_tables(engine: Engine) -> None:
+    """Создаем таблицы networks и stations в Postgres, если их нет"""
     metadata.create_all(engine)
     logger.info('Таблицы созданы: %s, %s', NETWORKS_TABLE, STATIONS_TABLE)
 
-def insert_networks(engine, networks: list[dict]) -> None:
+def insert_networks(engine: Engine, networks: list[dict]) -> None:
+    """Загружает networks в postgres: батчи по 500, upsert по id.
+
+    Дубли id внутри батча схлопываются, остается первое вхождение"""
     rows_map: dict = {}
     skipped = 0
     for net in networks:
@@ -96,10 +100,12 @@ def insert_networks(engine, networks: list[dict]) -> None:
             inserted += result.rowcount
     logger.info('networks: вставлено/обновлено %d из %d', inserted, len(rows))
 
-def _norm_coord(value):
+def _norm_coord(value: float | str | None) -> float | None:
+    """Приводит координату к float; если значение не число, то None"""
     return None if value is None else float(value)
 
 def _station_id(network_id: str, station: dict) -> str:
+    """Идентификатор станции: поле id или md5 от network|name|lat|lon"""
     native = station.get('id')
     if native is not None:
         return str(native)
@@ -108,7 +114,10 @@ def _station_id(network_id: str, station: dict) -> str:
            f"|{_norm_coord(station.get('longitude'))}")
     return hashlib.md5(raw.encode('utf-8')).hexdigest()
 
-def insert_stations(engine, stations: list[dict]) -> None:
+def insert_stations(engine: Engine, stations: list[dict]) -> None:
+    """Загружает станции в БД, батчи по 1000, upsert по (network_id, station_id)
+
+    Дубли ключа внутри батча схлопываются, остается первое вхождение"""
     rows_map: dict = {}
     for st in stations:
         station_id = _station_id(st['network_id'], st)
@@ -146,6 +155,7 @@ def insert_stations(engine, stations: list[dict]) -> None:
             inserted += result.rowcount
     logger.info('stations: вставлено/обновлено %d из %d', inserted, len(rows))
 
-def get_engine():
+def get_engine() -> Engine:
+    """Создает SQLAlchemy engine из DATABASE_URL"""
     return create_engine(DATABASE_URL)
 

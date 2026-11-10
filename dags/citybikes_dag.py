@@ -9,6 +9,7 @@ from airflow.sdk import DAG
 
 
 def _create_tables() -> None:
+    """создает таблицы в postgres"""
     from thirdsemestrwork.load import create_tables, get_engine
 
     engine = get_engine()
@@ -18,6 +19,7 @@ def _create_tables() -> None:
         engine.dispose()
 
 def _load_networks() -> None:
+    """network.json в Postgres"""
     from thirdsemestrwork.config import DATA_DIR
     from thirdsemestrwork.extract import load_networks
     from thirdsemestrwork.load import get_engine, insert_networks
@@ -29,6 +31,7 @@ def _load_networks() -> None:
         engine.dispose()
 
 def _load_stations() -> None:
+    """stations_output.json в Postgres"""
     from thirdsemestrwork.config import DATA_DIR
     from thirdsemestrwork.extract import load_stations
     from thirdsemestrwork.load import get_engine, insert_stations
@@ -40,16 +43,19 @@ def _load_stations() -> None:
         engine.dispose()
 
 def _build_datamart() -> None:
+    """Spark собирает витрину и пишет parquet на hdfs"""
     from thirdsemestrwork.datamart import run_datamart
 
     run_datamart()
 
 def _load_to_clickhouse() -> None:
+    """витрина из hdfs заливается в таблицу _new в ClickHouse"""
     from thirdsemestrwork.ch_load import run_ch_load
 
     run_ch_load()
 
 def _check_counts() -> None:
+    """сверка Postgres с витриной _new до публикации"""
     import logging
 
     import clickhouse_connect
@@ -72,15 +78,16 @@ def _check_counts() -> None:
     engine = get_engine()
     try:
         with engine.connect() as conn:
-            def q(sql: str):
+            def q(sql: str) -> int:
+                """запрос к postgres"""
                 return conn.execute(text(sql)).scalar_one()
             pg_networks = q(f'SELECT count(*) FROM {NETWORKS_TABLE}')
             pg_bikes = q(f'SELECT count(*) FROM {STATIONS_TABLE} WHERE bikes IS NOT NULL')
-            pg_bikes_no_net = q('''SELECT count(*) FROM {STATIONS_TABLE} s
+            pg_bikes_no_net = q(f'''SELECT count(*) FROM {STATIONS_TABLE} s
                                 LEFT JOIN {NETWORKS_TABLE} n ON s.network_id = n.id
-                                WHERE n.id IS NULL ANS s.bikes IS NOT NULL''')
+                                WHERE n.id IS NULL AND s.bikes IS NOT NULL''')
             pg_stations = q(f'SELECT count(*) FROM {STATIONS_TABLE}')
-            pg_stations_no_net  = q(f'''SELECT count(*) FROM {STATIONS_TABLE} s
+            pg_stations_no_net = q(f'''SELECT count(*) FROM {STATIONS_TABLE} s
                 LEFT JOIN {NETWORKS_TABLE} n ON s.network_id = n.id
                 WHERE n.id IS NULL''')
             pg_renting = q(f'''SELECT count(*) FROM {STATIONS_TABLE}
@@ -101,14 +108,15 @@ def _check_counts() -> None:
         password=CH_PASSWORD, database=CH_DATABASE
     )
     try:
-        def c(sql: str):
+        def c(sql: str) -> int:
+            """запрос к clickhouse"""
             return ch.command(sql)
         cand = f'{CH_DM_TABLE}_new'
         ch_total = c(f'SELECT count() FROM {cand}')
         ch_stations = c(f'SELECT count(station_id) FROM {cand}')
         ch_bikes = c(f'SELECT countIf(isNotNull(free_bikes)) FROM {cand}')
         ch_networks = c(f'SELECT uniqExact(network_id) FROM {cand}')
-        hdfs_rows = c(f'SELECT count() FROM {cand}_hdfs')
+        hdfs_rows = c(f'SELECT count() FROM {CH_DM_TABLE}_hdfs')
         ch_renting = c(f'SELECT countIf(isNotNull(renting)) FROM {cand}')
         ch_ts = c(f'SELECT countIf(isNotNull(timestamp)) FROM {cand}')
     finally:
@@ -145,6 +153,7 @@ def _check_counts() -> None:
              ch_renting, ch_ts, ch_total)
 
 def _publish_ch() -> None:
+    """публикует витрину, замена основной таблицы через Exchange tables"""
     from thirdsemestrwork.ch_load import run_ch_publish
     run_ch_publish()
 
