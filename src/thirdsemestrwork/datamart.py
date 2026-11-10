@@ -115,7 +115,10 @@ def build_datamart(spark: SparkSession) -> DataFrame:
             F.col('n.loc.longitude').alias('network_longitude'),
             F.trim(F.col('n.loc.city')).alias('city'),
             F.trim(F.col('n.loc.country')).alias('country'),
-            F.transform(F.col('n.company'), lambda x: F.trim(x)).alias('company'),
+            F.coalesce(
+                F.transform(F.col('n.company'), lambda x: F.trim(x)),
+                F.array().cast('array<string>'),
+            ).alias('company'),
             F.trim(F.col('n.system')).alias('system'),
             F.col('s.station_id'),
             F.trim(F.col('s.station_name')).alias('station_name'),
@@ -130,12 +133,15 @@ def build_datamart(spark: SparkSession) -> DataFrame:
             F.col('s.ex.slots').cast('int').alias('slots'),
             F.col('s.ex.ebikes').cast('int').alias('ebikes'),
             F.col('s.ex.has_ebikes'),
-            F.transform(F.col('s.ex.payment'), lambda x: F.trim(x)).alias('payment'),
+            F.coalesce(
+                F.transform(F.col('s.ex.payment'), lambda x: F.trim(x)),
+                      F.array().cast('array<string>'),
+            ).alias('payment'),
             F.col('s.ex').getField('payment-terminal').alias('payment_terminal'),
             F.trim(F.col('s.ex.address')).alias('address'),
             F.trim(F.col('s.ex.post_code')).alias('post_code'),
             F.concat_ws('/', F.trim(F.col('n.network_name')),
-                        F.trim(F.col('s.station_name'))).alias('network_station'),
+            F.trim(F.col('s.station_name'))).alias('network_station'),
             F.when(F.col('n.company').isNotNull(), F.size(F.col('n.company')))
             .otherwise(F.lit(0))
             .cast('int')

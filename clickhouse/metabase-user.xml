@@ -1,0 +1,13 @@
+<clickhouse>
+    <profiles>
+        <metabase_readonly>
+            <readonly>2</readonly>
+        </metabase_readonly>
+    </profiles>
+    <users>
+        <metabase>
+            <password>metabase_ro</password>
+            <profile>metabase_readonly</profile>
+        </metabase>
+    </users>
+</clickhouse>

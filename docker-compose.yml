@@ -38,7 +38,7 @@ services:
       POSTGRES_PASSWORD: etl
       POSTGRES_DB: citybikes
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
@@ -57,7 +57,7 @@ services:
     environment:
       - CLUSTER_NAME=citybikes
     ports:
-      - "9870:9870"
+      - "127.0.0.1:9870:9870"
     volumes:
       - hadoop_namenode:/hadoop/dfs/name
     restart: always
@@ -80,12 +80,12 @@ services:
       CLICKHOUSE_DB: citybikes
       CLICKHOUSE_USER: etl
       CLICKHOUSE_PASSWORD: etl
-      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
     ports:
-      - "8123:8123"
-      - "9000:9000"
+      - "127.0.0.1:8123:8123"
+      - "127.0.0.1:9000:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse/metabase-user.xml:/etc/clickhouse-server/users.d/metabase.xml:ro
     ulimits:
       nofile:
         soft: 262144
@@ -102,7 +102,7 @@ services:
     image: metabase/metabase:v0.63.18
     container_name: citybikes-metabase
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - metabase_data:/metabase.db
     restart: always
@@ -118,7 +118,7 @@ services:
     <<: *airflow-common
     command: api-server
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/monitor/health"]
       interval: 30s
