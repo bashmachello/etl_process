@@ -25,7 +25,7 @@ def spark():
             .getOrCreate()
         )
     except Exception as e:
-        pytest.skip(f'Spark не стартовал (нет Java локально?): {e}')
+        pytest.skip(f'Spark не стартовал, возможно нет Java локально: {e}')
     yield session
     session.stop()
 

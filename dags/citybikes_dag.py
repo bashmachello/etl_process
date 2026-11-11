@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import DAG
@@ -159,8 +160,8 @@ def _publish_ch() -> None:
 
 with DAG(
     dag_id='citybikes_load',
-    start_date=datetime(2026, 9, 15),
-    schedule=None,
+    start_date=datetime(2026, 9, 15, tzinfo=ZoneInfo('Europe/Moscow')),
+    schedule='0 3 * * *',
     catchup=False,
     max_active_runs=1,
     default_args={'retries': 2, 'retry_delay': timedelta(minutes=1)},
