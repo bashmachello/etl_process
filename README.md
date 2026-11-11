@@ -106,7 +106,7 @@ ClickHouse - `etl/etl` для пайплайна и `metabase/metabase_ro` (то
 ## DAG Airflow
 
 `dags/citybikes_dag.py`, `dag_id = citybikes_load`, ежедневное расписание `0 3 * * *` - 
-в 03:00 по Europe/Moscow, `catchup-Flase` - без догоняющих прогонов за пропущенное время,
+в 03:00 по Europe/Moscow, `catchup=False` - без догоняющих прогонов за пропущенное время,
 `max_active_runs=1` (полная перезагрузка снапшота не должна идти параллельно сама с собой),
 `retries=2` с задержкой 1 минута.
 
@@ -297,7 +297,7 @@ GROUP BY latitude, longitude
 Задача `check_counts` сравнивает Postgres с витриной **до публикации** и падает при
 расхождении: число сетей, число станций, заполненность `free_bikes`, `renting`,
 `timestamp`, а также `строк в HDFS == строк во временной таблице ClickHouse`.
-Сверка сознательно ассиметрична: Postgres считает "ключ присутствует в JSON"
+Сверка сознательно асимметрична: Postgres считает "ключ присутствует в JSON"
 (`extra->>'renting' IS NOT NULL`), витрина - "значение успешно распарсилось"
 (`isNotNull(renting)`). Значение, которое не удалось привести (например, `renting='yes'`),
 в витрине исчезнет - проверка заметит потерю и остановит публикацию. 
@@ -341,6 +341,8 @@ GROUP BY latitude, longitude
 
 ## Порядок запуска
 
+Требования: Docker Desktop (WSL2), ~8 ГБ свободной памяти;
+
 1. Скачать данные и положить в `data/` (`networks.json`, `stations_output/*.json`).
 2. Создать `.env` из шаблона и сгенерировать секрет:
    ```bash
@@ -372,7 +374,7 @@ GROUP BY latitude, longitude
    Admin → Databases → добавить ClickHouse: host `clickhouse`, port `8123`,
    user `metabase`, password `metabase_ro`, db `citybikes`. В Table Metadata выставить колонке
    `country` semantic type `Country` (нужно для Location фильтра дашборда).
-8. Остановка: `docker compose down`. 
+8. Остановка: `docker compose down`. **Флаг `-v` ** сотрет тома, включая дашборд Metabase.
 
 ## Тесты и линтер
 
