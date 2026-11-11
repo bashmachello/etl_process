@@ -77,9 +77,9 @@ services:
     image: clickhouse/clickhouse-server:26.8.6
     container_name: citybikes-clickhouse
     environment:
-      CLICKHOUSE_DB: citybikes
-      CLICKHOUSE_USER: etl
-      CLICKHOUSE_PASSWORD: etl
+      CLICKHOUSE_DB: ${CH_DATABASE:-citybikes}
+      CLICKHOUSE_USER: ${CH_USER:-etl}
+      CLICKHOUSE_PASSWORD: ${CH_PASSWORD:-etl}
     ports:
       - "127.0.0.1:8123:8123"
       - "127.0.0.1:9000:9000"
@@ -91,7 +91,7 @@ services:
         soft: 262144
         hard: 262144
     healthcheck:
-      test: ["CMD", "clickhouse-client", "--user", "etl", "--password", "etl", "--query", "SELECT 1"]
+      test: ["CMD-SHELL", "clickhouse-client --user $$CLICKHOUSE_USER --password $$CLICKHOUSE_PASSWORD --query 'SELECT 1'"]
       interval: 10s
       timeout: 5s
       retries: 5

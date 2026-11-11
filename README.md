@@ -203,6 +203,92 @@ ClickHouse-драйвер):
 | Самые загруженные станции (доля свободных велосипедов) | таблица |
 | Карта станций мира                                     | карта |
 
+
+### Запросы карточек
+
+Каждая карточка - SQL-вопрос к `citybikes.a_spiridonov_dm`. В каждом запросе переменная
+`{{country}}` - Field Filter на колонку `country` (Required - выкл).
+
+**Всего сетей** / **Всего станций** / **Сети без данных о станциях, %** (скаляры):
+```sql
+SELECT uniqExact(network_id) AS networks FROM citybikes.a_spiridonov_dm WHERE {{country}}
+```
+```sql
+SELECT count(station_id) AS stations FROM citybikes.a_spiridonov_dm WHERE {{country}}
+```
+```sql
+SELECT round(uniqExactIf(network_id, isNull(station_id)) * 100.0 / uniqExact(network_id), 1) AS pct
+FROM citybikes.a_spiridonov_dm WHERE {{country}}
+```
+
+**Станции без названия, %** / **без данных о велосипедах, %** (скаляры):
+```sql
+SELECT round(countIf(isNull(station_name) or station_name = '') * 100.0 / count(), 2) AS pct
+FROM citybikes.a_spiridonov_dm WHERE station_id IS NOT NULL AND {{country}}
+```
+```sql
+SELECT round(countIf(isNull(free_bikes)) * 100.0 / count(), 2) AS pct
+FROM citybikes.a_spiridonov_dm WHERE station_id IS NOT NULL AND {{country}}
+```
+
+**Свободные велосипеды / свободные доки** (горизонтальный бар):
+```sql
+SELECT 'Свободные велосипеды' AS metric, sum(free_bikes) AS value
+FROM citybikes.a_spiridonov_dm WHERE {{country}}
+UNION ALL
+SELECT 'Свободные доки', sum(empty_slots)
+FROM citybikes.a_spiridonov_dm WHERE {{country}}
+```
+
+**Электровелосипеды по странам** (бар):
+```sql
+SELECT country, countIf(has_ebikes) AS stations_with_ebikes, sum(ebikes) AS ebikes
+FROM citybikes.a_spiridonov_dm WHERE {{country}}
+GROUP BY country ORDER BY stations_with_ebikes DESC LIMIT 10
+```
+
+**Оплата картой/телефоном по городам** (бар):
+```sql
+SELECT city, countIf(has(payment, 'creditcard')) AS with_card,
+       countIf(has(payment, 'phone')) AS with_phone
+FROM citybikes.a_spiridonov_dm WHERE {{country}}
+GROUP BY city ORDER BY with_card DESC LIMIT 10
+```
+
+**Топ-10 сетей по числу станций** (горизонтальный бар):
+```sql
+SELECT network_id, concat(coalesce(network_name, ''), ' — ', coalesce(city, '')) AS network,
+       count(station_id) AS stations
+FROM citybikes.a_spiridonov_dm WHERE {{country}}
+GROUP BY network_id, network ORDER BY stations DESC LIMIT 10
+```
+
+**Топ-10 городов по числу станций** (таблица):
+```sql
+SELECT city, count(station_id) AS stations, uniqExact(network_id) AS networks 
+FROM citybikes.a_spiridonov_dm WHERE {{country}}
+GROUP BY city ORDER BY stations DESC LIMIT 10
+```
+
+**Самые востребованные станции** (таблица; `total_slots` — всего мест, `free_pct` — доля свободных велосипедов, сортировка по возрастанию = самые разобранные):
+```sql
+SELECT network_station, city, free_bikes,
+       free_bikes + empty_slots AS total_slots,
+       round(free_bikes * 100.0 / (free_bikes + empty_slots), 1) AS free_pct
+FROM citybikes.a_spiridonov_dm
+WHERE free_bikes >= 1 AND free_bikes + empty_slots >= 20 AND {{country}}
+ORDER BY free_pct ASC, total_slots DESC LIMIT 10
+```
+
+**Карта станций мира** (карта):
+```sql
+SELECT round(station_latitude, 1) AS latitude, round(station_longitude, 1) AS longitude,
+       count(station_id) AS stations, sum(free_bikes) AS bikes
+FROM citybikes.a_spiridonov_dm
+WHERE {{country}} AND station_latitude IS NOT NULL
+GROUP BY latitude, longitude
+```
+
 Фильтр: "Страна" - dashboard-фильтр типа **Location**, подключен ко всем карточкам через
 переменную `{{country}}` (Field Filter -> колонка `country`, semantic type `Country`).
 
@@ -243,6 +329,8 @@ ClickHouse-драйвер):
 │   ├── test_datamart.py            # _to_bool, _parse_datetime, jdbc-креды
 │   └── test_smoke.py               # импорт пакета
 ├── scripts/                        # скрипт исследования данных
+├── clickhouse/
+│   └── metabase-user.xml           # read-only пользователь Metabase
 ├── postgres/init/                  # SQL при первом старте Postgres (CREATE DATABASE airflow)
 ├── data/                           # файлы CityBikes (в git не входит)
 ├── docker-compose.yml              # весь стек
