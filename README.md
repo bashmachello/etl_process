@@ -185,23 +185,24 @@ graph TD
 
 ## Дашборд Metabase
 
-12 карточек + фильтр по стране (источник - `citybikes.a_spiridonov_dm`, нативный
+13 карточек + фильтр по стране (источник - `citybikes.a_spiridonov_dm`, нативный
 ClickHouse-драйвер):
 
-| Карточка                                               | Визуализация |
-|--------------------------------------------------------|--------------|
-| Всего сетей велошеринга                                | число |
-| Всего станций                                          | число |
-| Сети без данных о станциях, %                          | число |
-| Станции без названия, %                                | число |
-| Станции без данных о велосипедах, %                    | число |
+| Карточка                                               | Визуализация       |
+|--------------------------------------------------------|--------------------|
+| Всего сетей велошеринга                                | число              |
+| Всего станций                                          | число              |
+| Сети без данных о станциях, %                          | число              |
+| Станции без названия, %                                | число              |
+| Станции без данных о велосипедах, %                    | число              |
 | Свободные велосипеды / свободные доки по миру          | горизонтальный бар |
-| Электровелосипеды по странам                           | бар |
-| Оплата картой/телефоном по городам                     | бар |
+| Электровелосипеды по странам                           | бар                |
+| Оплата картой/телефоном по городам                     | бар                |
 | Топ-10 сетей по числу станций                          | горизонтальный бар |
-| Топ-10 городов по числу станций                        | таблица |
-| Самые загруженные станции (доля свободных велосипедов) | таблица |
-| Карта станций мира                                     | карта |
+| Топ-10 стран по числу станций                          | горизонтальный бар |
+| Самые загруженные станции (доля свободных велосипедов) | таблица            |
+| Карта станций мира                                     | карта              |
+| Международные компании                                 | таблица            |
 
 
 ### Запросы карточек
@@ -263,11 +264,11 @@ FROM citybikes.a_spiridonov_dm WHERE {{country}}
 GROUP BY network_id, network ORDER BY stations DESC LIMIT 10
 ```
 
-**Топ-10 городов по числу станций** (таблица):
+**Топ-10 стран по числу станций** (горизонтальный бар):
 ```sql
-SELECT city, count(station_id) AS stations, uniqExact(network_id) AS networks 
+SELECT country, count(station_id) AS stations
 FROM citybikes.a_spiridonov_dm WHERE {{country}}
-GROUP BY city ORDER BY stations DESC LIMIT 10
+GROUP BY country ORDER BY stations DESC LIMIT 10
 ```
 
 **Самые востребованные станции** (таблица; `total_slots` — всего мест, `free_pct` — доля свободных велосипедов, сортировка по возрастанию = самые разобранные):
@@ -278,6 +279,19 @@ SELECT network_station, city, free_bikes,
 FROM citybikes.a_spiridonov_dm
 WHERE free_bikes >= 1 AND free_bikes + empty_slots >= 20 AND {{country}}
 ORDER BY free_pct ASC, total_slots DESC LIMIT 10
+```
+
+**Международные компании** (таблица):
+```sql
+SELECT company, uniqExact(network_id) AS networks, uniqExact(country) AS countries
+FROM (
+    SELECT arrayJoin(company) AS company, network_id, country
+    FROM citybikes.a_spiridonov_dm
+    WHERE {{country}}
+)
+GROUP BY company
+ORDER BY countries DESC, networks DESC
+LIMIT 10
 ```
 
 **Карта станций мира** (карта):
