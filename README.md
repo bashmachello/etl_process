@@ -371,7 +371,7 @@ GROUP BY latitude, longitude
    ```
 4. Узнать пароль `admin` (Airflow генерирует его случайно и печатает в лог):
    ```bash
-   docker compose logs airflow-api-server | grep -i password
+   docker compose logs airflow-api-server | Select-String -i password
    ```
    UI: http://localhost:8080
 5. Запустить DAG: DAGs -> `citybikes_load` -> включить переключатель DAG (unpause) и нажать
