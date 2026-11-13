@@ -47,7 +47,16 @@ DAGом Airflow.
 - значения `extra.renting/returning` приходят и как `bool`, и как строки `'1'/'true'/'0'/'false'`;
 - `timestamp` в разных форматах: ISO 8601, `dd/MM/yyyy HH:mm:ss`, эпоха в секундах и миллисекундах;
 - 8 сетей станций есть в станциях, но нет в справочнике сетей; у 395 сетей,
-  наоборот, нет ни одной станции.
+  наоборот, нет ни одной станции;
+- встречаются служебные точки операторов (депо/мастерские): например, строка 
+  "CHARTERED BIKE WORKSHOP (Prayagraj)" отдает 172 тысячи свободных велосипедов; 
+  витрина источник не искажает, выбросы отсечены условием на уровне BI;
+- заполненность полей фрагментарна и зависит от оператора: счетчик `ebikes` 
+  заполняют не все сети - KR и CN не отчитываются ни одной станцией, у TW
+  присутствует счетчик, но нет флага `has_ebikes`, MX - наоборот. Поэтому 
+  NULL трактуется как "нет данных", а не как ноль;
+- встречаются физически невозможные отрицательные счетчики (например `free` 
+  со значением -16 у сети EnCicla, или `bikes` со значением -3 у сети YouBike).
 
 ### Сверка с живым API
 Локальные файлы сверены с `https://api.citybik.es/v2/` (на 10.11.2026):
@@ -196,13 +205,13 @@ ClickHouse-драйвер):
 | Станции без названия, %                                | число              |
 | Станции без данных о велосипедах, %                    | число              |
 | Свободные велосипеды / свободные доки по миру          | горизонтальный бар |
-| Электровелосипеды по странам                           | бар                |
+| Доля электровелосипедов по странам                     | бар                |
 | Оплата картой/телефоном по городам                     | бар                |
 | Топ-10 сетей по числу станций                          | горизонтальный бар |
 | Топ-10 стран по числу станций                          | горизонтальный бар |
 | Самые загруженные станции (доля свободных велосипедов) | таблица            |
 | Карта станций мира                                     | карта              |
-| Международные компании                                 | таблица            |
+| Международные компании владеющие сетями                | таблица            |
 
 
 ### Запросы карточек
@@ -212,63 +221,80 @@ ClickHouse-драйвер):
 
 **Всего сетей** / **Всего станций** / **Сети без данных о станциях, %** (скаляры):
 ```sql
-SELECT uniqExact(network_id) AS networks FROM citybikes.a_spiridonov_dm WHERE {{country}}
+SELECT uniqExact(network_id) AS networks 
+FROM citybikes.a_spiridonov_dm 
+WHERE {{country}}
 ```
 ```sql
-SELECT count(station_id) AS stations FROM citybikes.a_spiridonov_dm WHERE {{country}}
+SELECT count(station_id) AS stations 
+FROM citybikes.a_spiridonov_dm 
+WHERE {{country}}
 ```
 ```sql
 SELECT round(uniqExactIf(network_id, isNull(station_id)) * 100.0 / uniqExact(network_id), 1) AS pct
-FROM citybikes.a_spiridonov_dm WHERE {{country}}
+FROM citybikes.a_spiridonov_dm 
+WHERE {{country}}
 ```
 
 **Станции без названия, %** / **без данных о велосипедах, %** (скаляры):
 ```sql
 SELECT round(countIf(isNull(station_name) or station_name = '') * 100.0 / count(), 2) AS pct
-FROM citybikes.a_spiridonov_dm WHERE station_id IS NOT NULL AND {{country}}
+FROM citybikes.a_spiridonov_dm 
+WHERE station_id IS NOT NULL AND {{country}}
 ```
 ```sql
 SELECT round(countIf(isNull(free_bikes)) * 100.0 / count(), 2) AS pct
-FROM citybikes.a_spiridonov_dm WHERE station_id IS NOT NULL AND {{country}}
+FROM citybikes.a_spiridonov_dm 
+WHERE station_id IS NOT NULL AND {{country}}
 ```
 
 **Свободные велосипеды / свободные доки** (горизонтальный бар):
 ```sql
 SELECT 'Свободные велосипеды' AS metric, sum(free_bikes) AS value
-FROM citybikes.a_spiridonov_dm WHERE {{country}}
+FROM citybikes.a_spiridonov_dm 
+WHERE {{country}} AND (isNull(free_bikes) OR free_bikes < 1000)
 UNION ALL
 SELECT 'Свободные доки', sum(empty_slots)
-FROM citybikes.a_spiridonov_dm WHERE {{country}}
+FROM citybikes.a_spiridonov_dm 
+WHERE {{country}} AND (isNull(free_bikes) OR free_bikes < 1000)
 ```
 
 **Электровелосипеды по странам** (бар):
 ```sql
 SELECT country, countIf(has_ebikes) AS stations_with_ebikes, sum(ebikes) AS ebikes
-FROM citybikes.a_spiridonov_dm WHERE {{country}}
-GROUP BY country ORDER BY stations_with_ebikes DESC LIMIT 10
+FROM citybikes.a_spiridonov_dm 
+WHERE {{country}}
+GROUP BY country 
+ORDER BY stations_with_ebikes DESC LIMIT 10
 ```
 
 **Оплата картой/телефоном по городам** (бар):
 ```sql
 SELECT city, countIf(has(payment, 'creditcard')) AS with_card,
        countIf(has(payment, 'phone')) AS with_phone
-FROM citybikes.a_spiridonov_dm WHERE {{country}}
-GROUP BY city ORDER BY with_card DESC LIMIT 10
+FROM citybikes.a_spiridonov_dm 
+WHERE {{country}}
+GROUP BY city 
+ORDER BY with_card DESC LIMIT 10
 ```
 
 **Топ-10 сетей по числу станций** (горизонтальный бар):
 ```sql
 SELECT network_id, concat(coalesce(network_name, ''), ' — ', coalesce(city, '')) AS network,
        count(station_id) AS stations
-FROM citybikes.a_spiridonov_dm WHERE {{country}}
-GROUP BY network_id, network ORDER BY stations DESC LIMIT 10
+FROM citybikes.a_spiridonov_dm 
+WHERE {{country}}
+GROUP BY network_id, network 
+ORDER BY stations DESC LIMIT 10
 ```
 
 **Топ-10 стран по числу станций** (горизонтальный бар):
 ```sql
 SELECT country, count(station_id) AS stations
-FROM citybikes.a_spiridonov_dm WHERE {{country}}
-GROUP BY country ORDER BY stations DESC LIMIT 10
+FROM citybikes.a_spiridonov_dm 
+WHERE {{country}}
+GROUP BY country 
+ORDER BY stations DESC LIMIT 10
 ```
 
 **Самые востребованные станции** (таблица; `total_slots` — всего мест, `free_pct` — доля свободных велосипедов, сортировка по возрастанию = самые разобранные):
@@ -281,7 +307,7 @@ WHERE free_bikes >= 1 AND free_bikes + empty_slots >= 20 AND {{country}}
 ORDER BY free_pct ASC, total_slots DESC LIMIT 10
 ```
 
-**Международные компании** (таблица):
+**Международные компании владеющие сетями** (таблица):
 ```sql
 SELECT company, uniqExact(network_id) AS networks, uniqExact(country) AS countries
 FROM (
@@ -296,15 +322,23 @@ LIMIT 10
 
 **Карта станций мира** (карта):
 ```sql
-SELECT round(station_latitude, 1) AS latitude, round(station_longitude, 1) AS longitude,
-       count(station_id) AS stations, sum(free_bikes) AS bikes
+SELECT round(station_latitude, 1) as latitude,
+       round(station_longitude, 1) as longitude,
+       country,
+       count(station_id) as stations,
+       sum(free_bikes) as bikes
 FROM citybikes.a_spiridonov_dm
-WHERE {{country}} AND station_latitude IS NOT NULL
-GROUP BY latitude, longitude
+WHERE {{country}} AND station_latitude is not null 
+	  AND (isNull(free_bikes) OR free_bikes < 1000)
+	  AND NOT (station_latitude = 0 and station_longitude = 0)
+GROUP BY latitude, longitude, country
 ```
 
 Фильтр: "Страна" - dashboard-фильтр типа **Location**, подключен ко всем карточкам через
 переменную `{{country}}` (Field Filter -> колонка `country`, semantic type `Country`).
+На карточке "Доля электровелосипедов по странам" страны без данных об электро
+(KR, CN - счетчик `ebikes` не заполнен ни у одной станции) - без точки на линии 
+доли. Явные нули операторов (MX) отображаются точкой в нуле.
 
 ## Сверка качества данных
 
